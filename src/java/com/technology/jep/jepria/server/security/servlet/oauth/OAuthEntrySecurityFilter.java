@@ -1,21 +1,19 @@
-package com.technology.jep.jepria.server.security.servlet;
+package com.technology.jep.jepria.server.security.servlet.oauth;
 
-import com.technology.jep.jepria.server.security.OAuthRequestWrapper;
+import com.technology.jep.jepria.server.env.EnvironmentPropertySupport;
+import com.technology.jep.jepria.server.security.servlet.MultiInstanceSecurityFilter;
+import com.technology.jep.jepria.shared.exceptions.ApplicationException;
 import org.apache.log4j.Logger;
 import org.jepria.oauth.sdk.*;
-import com.technology.jep.jepria.server.env.EnvironmentPropertySupport;
 
 import javax.servlet.*;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Base64;
 
-import static com.technology.jep.jepria.server.security.JepSecurityConstant.OAUTH_CSRF_TOKEN;
 import static com.technology.jep.jepria.server.security.JepSecurityConstant.OAUTH_TOKEN;
 import static javax.servlet.http.HttpServletResponse.SC_FORBIDDEN;
 import static org.jepria.oauth.sdk.OAuthConstants.*;
@@ -65,8 +63,14 @@ public class OAuthEntrySecurityFilter extends MultiInstanceSecurityFilter {
       /**
        * Create state param and save it to Cookie for checking in future to prevent 'Replay attacks'
        */
-      State state = new State(httpServletRequest.getQueryString());
-      Cookie stateCookie = new Cookie(OAUTH_CSRF_TOKEN, state.toString());
+      String redirectUri;
+      if (httpServletRequest.getQueryString() != null && httpServletRequest.getQueryString().length() > 0) {
+        redirectUri = httpServletRequest.getRequestURL().append("?").append(httpServletRequest.getQueryString()).toString();
+      } else {
+        redirectUri = httpServletRequest.getRequestURL().toString();
+      }
+      State state = new State();
+      Cookie stateCookie = new Cookie(state.toString(), redirectUri);
       stateCookie.setSecure(httpServletRequest.isSecure());
       stateCookie.setPath(httpServletRequest.getContextPath());
       stateCookie.setHttpOnly(true);
@@ -102,11 +106,11 @@ public class OAuthEntrySecurityFilter extends MultiInstanceSecurityFilter {
      * Если запрос содержит авторизационный код, то следует запросить по нему токен.
      */
     if (request.getParameter(CODE) != null && request.getParameter(STATE) != null) {
-      String state = getState(request);
+      String state = getState(request, response);
       /**
        * Обязательная проверка CSRF
        */
-      if (request.getParameter(STATE).equals(state)) {
+      if (state != null) {
         try {
           TokenResponse tokenObject = getToken(request, request.getParameter(CODE));
           if (tokenObject != null) {
@@ -116,16 +120,11 @@ public class OAuthEntrySecurityFilter extends MultiInstanceSecurityFilter {
             tokenCookie.setPath("/");
             tokenCookie.setHttpOnly(true);
             response.addCookie(tokenCookie);
-            StringBuffer requestUrl = request.getRequestURL();
-            String[] stateParts = new String(Base64.getUrlDecoder().decode(state)).split("~");
-            if (stateParts != null && stateParts.length == 2) {
-              requestUrl.append("?" + stateParts[1]);
-              response.sendRedirect(requestUrl.toString());
-              return;
-            }
+            response.sendRedirect(state);
+            return;
           } else {
             logger.error("Token request failed");
-            throw new ConnectException("Token request failed");
+            throw new ServletException("Token request failed");
           }
         } catch (Throwable th) {
           th.printStackTrace();
@@ -140,25 +139,36 @@ public class OAuthEntrySecurityFilter extends MultiInstanceSecurityFilter {
       /**
        * Вход после logout;
        */
-      String state = getState(request);
+      String state = getState(request, response);
       /**
        * Обязательная проверка CSRF
        */
-      if (request.getParameter(STATE).equals(state)) {
-        StringBuffer requestUrl = request.getRequestURL();
-        String[] stateParts = new String(Base64.getUrlDecoder().decode(state)).split("~");
-        if (stateParts != null && stateParts.length == 2) {
-          requestUrl.append("?" + stateParts[1]);
-          response.sendRedirect(requestUrl.toString());
-          return;
-        }
+      if (state != null) {
+        response.sendRedirect(state);
+        return;
       }
     }
-
-    OAuthRequestWrapper oauthRequest = new OAuthRequestWrapper(request);
-
-    if (oauthRequest.authenticate(response)) {
-      if (securityRoles.size() == 0 || securityRoles.stream().anyMatch(oauthRequest::isUserInRole)) {
+  
+    OAuthRequestWrapper oauthRequest;
+    try {
+      oauthRequest = request instanceof OAuthRequestWrapper ? (OAuthRequestWrapper) request : new OAuthRequestWrapper(request);
+    } catch (ApplicationException e) {
+      e.printStackTrace();
+      throw new ServletException(e);
+    }
+  
+    if (securityRoles.size() == 0) {
+      /**
+       * For public resource: authorize request, if it has token. (for cases where JepMainServiceServlet is public)
+       */
+      String token = oauthRequest.getTokenFromRequest();
+      if (token != null) {
+        oauthRequest.authenticate(response);
+      }
+      filterChain.doFilter(oauthRequest, servletResponse);
+      return;
+    } else if (oauthRequest.authenticate(response)) {
+      if (securityRoles.stream().anyMatch(oauthRequest::isUserInRole)) {
         filterChain.doFilter(oauthRequest, servletResponse);
       } else {
         response.sendError(SC_FORBIDDEN, "Access denied");
@@ -169,11 +179,14 @@ public class OAuthEntrySecurityFilter extends MultiInstanceSecurityFilter {
     }
   }
 
-  private String getState(HttpServletRequest request) {
+  private String getState(HttpServletRequest request, HttpServletResponse response) {
+    String state = request.getParameter(STATE);
     Cookie[] cookies = request.getCookies();
     if (cookies != null && cookies.length > 0) {
       for (Cookie cookie : cookies) {
-        if (cookie.getName().equals(OAUTH_CSRF_TOKEN)) {
+        if (cookie.getName().equals(state)) {
+          cookie.setMaxAge(0);
+          response.addCookie(cookie);
           return cookie.getValue();
         }
       }

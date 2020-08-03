@@ -1,14 +1,12 @@
 package com.technology.jep.jepria.server.security.servlet;
 
-import com.technology.jep.jepria.server.env.EnvironmentPropertySupport;
-
-import javax.servlet.*;
+import javax.servlet.Filter;
+import javax.servlet.FilterConfig;
+import javax.servlet.FilterRegistration;
+import javax.servlet.ServletException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static org.jepria.oauth.sdk.OAuthConstants.CLIENT_ID_PROPERTY;
-import static org.jepria.oauth.sdk.OAuthConstants.CLIENT_SECRET_PROPERTY;
 
 /**
  * <pre>

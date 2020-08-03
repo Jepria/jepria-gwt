@@ -1,6 +1,7 @@
 package com.technology.jep.jepria.server.security.servlet;
 
 import static com.technology.jep.jepria.server.JepRiaServerConstant.LOGIN_SUFFIX_FOR_HASH_AUTHORIZATION;
+import static com.technology.jep.jepria.server.security.JepSecurityConstant.OAUTH_TOKEN;
 import static com.technology.jep.jepria.shared.util.JepRiaUtil.isEmpty;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
@@ -10,6 +11,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -65,6 +67,18 @@ public class AutoLogonServlet extends HttpServlet {
         request.getSession().invalidate();
         request.logout();
         request.login(login, password);
+        if (request.getSession().getAttribute(OAUTH_TOKEN) != null) {
+          /**
+           * Если сессия содержит сохраненный токен, то добавим его в cookies.
+           * И в случае потери сессии, при обращении к другому экземпляру приложения или в результате падения серверов, авторизация будет сохранена.
+           * В случае Server-to-Server обращений рекомендуется вручную добавлять Cookie OAUTH_TOKEN в запрос вместе с JSESSION_ID.
+           */
+          Cookie tokenCookie = new Cookie(OAUTH_TOKEN, (String) request.getSession().getAttribute(OAUTH_TOKEN));
+          tokenCookie.setSecure(request.isSecure());
+          tokenCookie.setPath("/");
+          tokenCookie.setHttpOnly(true);
+          resp.addCookie(tokenCookie);
+        }
       } catch (ServletException e) {
         e.printStackTrace();
         resp.sendError(SC_UNAUTHORIZED, e.getMessage());

@@ -1,6 +1,7 @@
-package com.technology.jep.jepria.server.security.servlet;
+package com.technology.jep.jepria.server.security.servlet.oauth;
 
-import com.technology.jep.jepria.server.security.OAuthRequestWrapper;
+import com.technology.jep.jepria.server.security.servlet.MultiInstanceSecurityFilter;
+import com.technology.jep.jepria.shared.exceptions.ApplicationException;
 import org.apache.log4j.Logger;
 
 import javax.servlet.*;
@@ -36,9 +37,15 @@ public class OAuthServletSecurityFilter extends MultiInstanceSecurityFilter {
       filterChain.doFilter(servletRequest, servletResponse);
       return;
     }
-
-    OAuthRequestWrapper oauthRequest = request instanceof OAuthRequestWrapper ? (OAuthRequestWrapper) request : new OAuthRequestWrapper(request);
-
+  
+    OAuthRequestWrapper oauthRequest;
+    try {
+      oauthRequest = request instanceof OAuthRequestWrapper ? (OAuthRequestWrapper) request : new OAuthRequestWrapper(request);
+    } catch (ApplicationException e) {
+      e.printStackTrace();
+      throw new ServletException(e);
+    }
+  
     if (securityRoles.size() == 0) {
       /**
        * For public resource: authorize request, if it has token. (for cases where JepMainServiceServlet is public)

@@ -1,13 +1,11 @@
-package com.technology.jep.jepria.server.security;
+package com.technology.jep.jepria.server.security.servlet.oauth;
 
 import com.technology.jep.jepria.server.db.Db;
 import com.technology.jep.jepria.server.security.module.JepSecurityModule;
+import com.technology.jep.jepria.shared.exceptions.ApplicationException;
 import oracle.jdbc.OracleTypes;
 import org.apache.log4j.Logger;
-import org.jepria.oauth.sdk.TokenInfoRequest;
-import org.jepria.oauth.sdk.TokenInfoResponse;
-import org.jepria.oauth.sdk.TokenRevocationRequest;
-import com.technology.jep.jepria.server.env.EnvironmentPropertySupport;
+import org.jepria.oauth.sdk.*;
 import org.jepria.ssoutils.JepPrincipal;
 
 import javax.servlet.ServletException;
@@ -27,36 +25,43 @@ import static com.technology.jep.jepria.server.security.JepSecurityConstant.OAUT
 import static org.jepria.oauth.sdk.OAuthConstants.*;
 
 public class OAuthRequestWrapper extends HttpServletRequestWrapper {
-
+  
   private static Logger logger = Logger.getLogger(OAuthRequestWrapper.class.getName());
   public static final String AUTH_TYPE = "JWT";
-
+  
   protected HttpServletRequest delegate;
   private String tokenString = null;
   private JepPrincipal principal;
   private Db db;
-  private final String moduleName;
   private final String clientId;
   private final String clientSecret;
-
-  public OAuthRequestWrapper(HttpServletRequest request) {
+  
+  public OAuthRequestWrapper(HttpServletRequest request) throws ApplicationException {
     super(request);
     delegate = request;
-    moduleName = delegate.getServletContext().getContextPath().replaceFirst("/", "");
-    clientId = EnvironmentPropertySupport.getInstance(delegate).getProperty(moduleName + "/" + CLIENT_ID_PROPERTY);
-    clientSecret = EnvironmentPropertySupport.getInstance(delegate).getProperty(moduleName + "/" + CLIENT_SECRET_PROPERTY);
+    clientId = delegate.getServletContext().getInitParameter(CLIENT_ID_PROPERTY);
+    clientSecret = getClientSecret();
   }
-
+  
+  protected String getClientSecret() throws ApplicationException {
+    String clientSecret = (String) delegate.getSession().getAttribute(CLIENT_SECRET_PROPERTY);
+    if (clientSecret == null) {
+      Db db = new Db(DEFAULT_DATA_SOURCE_JNDI_NAME);
+      clientSecret = OAuthDbHelper.getClientSecret(db, clientId);
+    }
+    delegate.getSession().setAttribute(CLIENT_SECRET_PROPERTY, clientSecret);
+    return clientSecret;
+  }
+  
   public String getTokenFromRequest() {
     if (tokenString != null) {
       return tokenString;
     }
     Cookie[] cookies = delegate.getCookies();
     if (cookies == null) {
-      tokenString = null;
-      return tokenString;
+      return null;
     }
-    for (Cookie cookie: cookies) {
+    for (Cookie cookie : cookies) {
       if (cookie.getName().equalsIgnoreCase(OAUTH_TOKEN)) {
         tokenString = cookie.getValue();
         break;
@@ -70,20 +75,24 @@ public class OAuthRequestWrapper extends HttpServletRequestWrapper {
         tokenString = null;
       }
     }
+    if (delegate.getSession().getAttribute(OAUTH_TOKEN) != null) {
+      tokenString = (String) delegate.getSession().getAttribute(OAUTH_TOKEN);
+    }
     return tokenString;
   }
-
+  
   @Override
-  public String getAuthType(){
+  public String getAuthType() {
     return AUTH_TYPE;
   }
-
+  
   private Db getDb() {
     if (this.db == null) {
       this.db = new Db(DEFAULT_DATA_SOURCE_JNDI_NAME);
     }
     return this.db;
   }
+  
   @Override
   public boolean isUserInRole(String role) {
     logger.trace("BEGIN isUserInRole()");
@@ -91,7 +100,6 @@ public class OAuthRequestWrapper extends HttpServletRequestWrapper {
     if (securityModule != null && securityModule.isAuthorizedBySso()) {
       return securityModule.getRoles().contains(role);
     } else {
-      //language=Oracle
       String sqlQuery =
         "begin ? := pkg_operator.isrole(" +
           "operatorid => ?, " +
@@ -107,22 +115,22 @@ public class OAuthRequestWrapper extends HttpServletRequestWrapper {
         callableStatement.setString(3, role);
         callableStatement.execute();
         result = new Integer(callableStatement.getInt(1));
-        if(callableStatement.wasNull()) result = null;
+        if (callableStatement.wasNull()) result = null;
       } catch (SQLException e) {
         e.printStackTrace();
       } finally {
         db.closeAll();
       }
-
+      
       return result != null && result.intValue() == 1;
     }
   }
-
+  
   @Override
   public Principal getUserPrincipal() {
     return principal;
   }
-
+  
   /**
    * Request token information form OAuth server
    */
@@ -134,11 +142,11 @@ public class OAuthRequestWrapper extends HttpServletRequestWrapper {
       .clientSecret(clientSecret)
       .token(tokenString)
       .build();
-    TokenInfoResponse response =  request.execute();
+    TokenInfoResponse response = request.execute();
     logger.trace("END getTokenInfo()");
     return response;
   }
-
+  
   @Override
   public boolean authenticate(HttpServletResponse httpServletResponse) {
     logger.trace("BEGIN authenticate()");
@@ -174,12 +182,25 @@ public class OAuthRequestWrapper extends HttpServletRequestWrapper {
     logger.trace("END authenticate()");
     return principal != null;
   }
-
+  
   @Override
-  public void login(String s, String s1) throws ServletException {
-    throw new UnsupportedOperationException();
+  public void login(String username, String password) throws ServletException {
+    TokenRequest tokenRequest = TokenRequest.Builder()
+      .clientId(clientId)
+      .clientSecret(clientSecret)
+      .grantType(GrantType.PASSWORD)
+      .userName(username)
+      .password(password)
+      .build();
+    try {
+      TokenResponse tokenResponse = tokenRequest.execute();
+      delegate.getSession().setAttribute(OAUTH_TOKEN, tokenResponse.getAccessToken());
+    } catch (IOException e) {
+      e.printStackTrace();
+      throw new ServletException(e);
+    }
   }
-
+  
   @Override
   public void logout() throws ServletException {
     String tokenString = getTokenFromRequest();
@@ -201,5 +222,5 @@ public class OAuthRequestWrapper extends HttpServletRequestWrapper {
       return;
     }
   }
-
+  
 }
