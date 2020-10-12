@@ -26,8 +26,7 @@ public class OAuthDbHelper {
       "); " +
       "end;";
     String result = null;
-    CallableStatement cs = db.prepare(sqlQuery);
-    try {
+    try (CallableStatement cs = db.prepare(sqlQuery)) {
       cs.registerOutParameter(1, OracleTypes.CURSOR);
       cs.setString(2, clientId);
       cs.executeQuery();
@@ -39,8 +38,6 @@ public class OAuthDbHelper {
       }
     } catch (SQLException ex) {
       throw new ApplicationException(ex.getMessage(), ex);
-    } finally {
-      cs.close();
     }
     return result;
   }

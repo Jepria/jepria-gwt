@@ -71,7 +71,6 @@ public class AutoLogonServlet extends HttpServlet {
           /**
            * Если сессия содержит сохраненный токен, то добавим его в cookies.
            * И в случае потери сессии, при обращении к другому экземпляру приложения или в результате падения серверов, авторизация будет сохранена.
-           * В случае Server-to-Server обращений рекомендуется вручную добавлять Cookie OAUTH_TOKEN в запрос вместе с JSESSION_ID.
            */
           Cookie tokenCookie = new Cookie(OAUTH_TOKEN, (String) request.getSession().getAttribute(OAUTH_TOKEN));
           tokenCookie.setSecure(request.isSecure());

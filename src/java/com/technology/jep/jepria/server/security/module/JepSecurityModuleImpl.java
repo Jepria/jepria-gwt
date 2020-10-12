@@ -83,7 +83,8 @@ public class JepSecurityModuleImpl extends JepAbstractSecurityModule {
       currentUrl = hostUrl + OAUTH_LOGOUT_CONTEXT_PATH + "?"
         + "&" + CLIENT_ID + "=" + clientId
         + "&" + REDIRECT_URI + "="
-        + URLEncoder.encode(hostUrl + url.getPath(), StandardCharsets.UTF_8.name()).replaceAll("\\+", "%20")
+        + URLEncoder.encode(url.getPath().endsWith("/") ? url.getPath().substring(0,url.getPath().length() - 1) : url.getPath(),
+          StandardCharsets.UTF_8.name()).replaceAll("\\+", "%20")
         + "&" + STATE + "=" + state.toString();
     }
     request.getSession().invalidate();

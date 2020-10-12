@@ -39,6 +39,9 @@ public class ExceptionManagerImpl implements ExceptionManager {
       Log.error(message, th);
       ErrorDialog errorDialog = new ErrorDialog(JepTexts.errors_dialog_title(), th, JepTexts.errors_client_statusCode0());
       errorDialog.show();
+    } else if (isOAuthTimeout(th)) {
+      Log.error(message, th);
+      Entrance.reload();
     } else {
       Log.error(message, th);
       JepMessageBoxImpl.instance.showError(th, message);
@@ -87,5 +90,15 @@ public class ExceptionManagerImpl implements ExceptionManager {
     String message = caught.getMessage();
     return caught instanceof InvocationException
       && message != null && message.contains("id=\"" + SsoUiConstants.LOGIN_FORM_HTML_ID + "\"");  // TODO Сделать строже
+  }
+
+  /**
+   * Метод проверяет, не похож ли текст ошибки на OAuth-ошибку логина,
+   * получаемую при устаревании сессии (только для Tomcat)
+   */
+  private static boolean isOAuthTimeout(Throwable caught) {
+    String message = caught.getMessage();
+    return caught instanceof InvocationException
+        && message != null && message.contains("<meta name=\"login\" content=\"login\">");
   }
 }
