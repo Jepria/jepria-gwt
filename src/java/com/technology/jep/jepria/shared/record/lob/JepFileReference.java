@@ -4,10 +4,12 @@ import com.google.gwt.regexp.shared.MatchResult;
 import com.google.gwt.regexp.shared.RegExp;
 import com.google.gwt.user.client.rpc.IsSerializable;
 
+import java.io.Serializable;
+
 /**
  * Ссылка на *_LOB-поле, идентифицирующая его в пределах таблицы БД.
  */
-public class JepFileReference<T> implements IsSerializable {
+public class JepFileReference<T> implements IsSerializable, Serializable {
   
   /**
    * Свойство для хранения имени файла
@@ -32,7 +34,7 @@ public class JepFileReference<T> implements IsSerializable {
   /**
    * Признак необходимости удаления файла.
    */
-  private boolean isDeleted = false;
+  private Boolean isDeleted = Boolean.FALSE;
 
   public JepFileReference() {}
   
@@ -42,8 +44,6 @@ public class JepFileReference<T> implements IsSerializable {
    * @param key        значение ключа
    * @param fileExtension    расширение файла
    * @param mimeType      mime-type файла
-   * 
-   * @throws выбрасывается исключение, если значение ключа отличается от строкового 
    * или числового
    */
   public JepFileReference(
@@ -64,8 +64,6 @@ public class JepFileReference<T> implements IsSerializable {
    * @param key        значение ключа
    * @param fileExtension    расширение файла
    * @param mimeType      mime-type файла
-   * 
-   * @throws выбрасывается исключение, если значение ключа отличается от строкового 
    * или числового
    */
   @SuppressWarnings("unchecked")

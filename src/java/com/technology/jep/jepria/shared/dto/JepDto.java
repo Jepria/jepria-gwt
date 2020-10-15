@@ -1,5 +1,6 @@
 package com.technology.jep.jepria.shared.dto;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -19,7 +20,7 @@ import com.google.gwt.safehtml.shared.SafeHtml;
  * данный класс интерфейсом {@link com.google.gwt.user.client.rpc.IsSerializable}, но и указать в качестве полей все возможные ссылки на типы передаваемых значений 
  * (для этого требуется использование fake-полей, на основе которых Gwt-компилятор создаст rpcPolicyMap, в который поместит информацию об указанных типах и позволит избежать {@link com.google.gwt.user.client.rpc.SerializationException}).
  */
-public class JepDto extends HashMap<String, Object> implements IsSerializable {
+public class JepDto extends HashMap<String, Object> implements IsSerializable, Serializable {
   private static final long serialVersionUID = 1L;
   
   /**
