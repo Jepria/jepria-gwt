@@ -5,17 +5,17 @@ import com.technology.jep.jepria.shared.service.JepMainServiceAsync;
 
 /**
  * TODO Напрашивается переименование
- * 
+ * <p>
  * Класс обработки Logout
  */
 public class Entrance {
 
   private static JepMainServiceAsync mainService = null;
-  
+
   public static void setService(JepMainServiceAsync service) {
     mainService = service;
   }
-  
+
   /**
    * Выход из приложения
    */
@@ -26,7 +26,7 @@ public class Entrance {
       }
 
       public void onSuccess(String logoutUrl) {
-        if(logoutUrl != null) {
+        if (logoutUrl != null && !logoutUrl.equals(getLocation())) {
           goTo(logoutUrl);
         } else {
           reload();
@@ -36,34 +36,22 @@ public class Entrance {
   }
 
   public native static String getLocation()/*-{
-      if ($wnd.parent) {
-        return $wnd.parent.location.href;
-      } else {
-        return $wnd.location.href;
-      }
+    return $wnd.location.href;
   }-*/;
 
   /**
    * Перезагрузка страницы (с учётом окружения - с Navigation или без)
    */
   public native static void reload() /*-{
-    try {
-      $wnd.parent.location.reload(true); // Сначала пробуем reload для фреймовой конфигурации
-    } catch(error) {
-      $wnd.location.reload(true); // На фреймах не сработало, значит у нас standalone-страница
-    }
+    $wnd.location.reload(true); // На
   }-*/;
 
   /**
    * Переход по заданному Url
-   * 
+   *
    * @param url
    */
   public native static void goTo(String url) /*-{
-    if ($wnd.parent) {
-      $wnd.parent.location.href = url;
-    } else {
-      $wnd.location.href = url;
-    }
+    $wnd.location.href = url;
   }-*/;
 }

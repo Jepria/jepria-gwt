@@ -29,6 +29,4 @@ public class JepSecurityConstant {
    * OAuth 2.0
    */
   public static final String OAUTH_TOKEN = "OAUTH_TOKEN";
-  public static final String OAUTH_PARAMS = "OAUTH_PARAMS";
-  public static final String OAUTH_CSRF_TOKEN = "OAUTH_STATE";
 }

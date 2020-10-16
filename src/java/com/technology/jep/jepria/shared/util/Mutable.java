@@ -1,11 +1,13 @@
 package com.technology.jep.jepria.shared.util;
 
+import java.io.Serializable;
+
 /**
  * Простейший контейнер для иммутабельных объектов.
  * 
  * @param <T> тип хранимого объекта
  */
-public class Mutable<T> {
+public class Mutable<T> implements Serializable {
   
   /**
    * Хранимое значение.

@@ -9,6 +9,7 @@ import org.apache.log4j.Logger;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSessionBindingEvent;
+import java.io.Serializable;
 import java.security.Principal;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -20,10 +21,8 @@ import static com.technology.jep.jepria.server.security.JepSecurityConstant.*;
 /**
  * Модуль поддержки безопасности
  */
-public abstract class JepAbstractSecurityModule implements JepSecurityModule {
+public abstract class JepAbstractSecurityModule implements JepSecurityModule, Serializable {
   protected static Logger logger;
-  
-  protected Db db = null;
   
   /**
    * Список ролей текущего пользователя 
@@ -56,14 +55,6 @@ public abstract class JepAbstractSecurityModule implements JepSecurityModule {
    * Признак того, что был вход через SSO
    */
   protected boolean isAuthorizedBySso = false;
-
-  protected void init() {
-    db = new Db(DEFAULT_DATA_SOURCE_JNDI_NAME);
-  }
-
-  protected JepAbstractSecurityModule(){
-    init();
-  }
   
   /**
    * Обновление полномочий пользователя в соответствии с указанным принципалом 
@@ -98,6 +89,10 @@ public abstract class JepAbstractSecurityModule implements JepSecurityModule {
     else if (makeError)
       throw new ApplicationException("You haven't enough rights to perform this operation (RoleId = " + role + ")", null);
     return false;
+  }
+
+  protected Db getDb() {
+    return new Db(DEFAULT_DATA_SOURCE_JNDI_NAME);
   }
 
   /**
@@ -149,7 +144,7 @@ public abstract class JepAbstractSecurityModule implements JepSecurityModule {
 
     long currentTime = System.currentTimeMillis();
     long age = (currentTime - guestCacheTime) / 1000;  // Сколько секунд находится в кэше.
-
+    Db db = getDb();
     try {
       if(age > GUEST_REFRESH_TIME_DEFAULT) {
         logger.trace("doLogonByGuest(): age > GUEST_REFRESH_TIME_DEFAULT");
@@ -174,7 +169,6 @@ public abstract class JepAbstractSecurityModule implements JepSecurityModule {
 
   private void onExpiredSession(String sessionId) {
     logger.trace("onExpiredSession(): sessionId = " + sessionId);
-    db.closeAll();
   }
     
   /**
@@ -185,8 +179,9 @@ public abstract class JepAbstractSecurityModule implements JepSecurityModule {
    */
   @Override
   public boolean isChangePassword(Integer operatorId) {
+    Db db = getDb();
     try {
-      return pkg_Operator.isChangePassword(this.db, operatorId);
+      return pkg_Operator.isChangePassword(db, operatorId);
     } catch (SQLException ex) {
       throw new SystemException("Password change check error", ex);
     } finally {
@@ -205,8 +200,9 @@ public abstract class JepAbstractSecurityModule implements JepSecurityModule {
    */
   @Override
   public void changePassword(Integer operatorId, String password, String newPassword, String newPasswordConfirm) {
+    Db db = getDb();
     try {
-      pkg_Operator.changePassword(this.db, operatorId, password, newPassword, newPasswordConfirm);
+      pkg_Operator.changePassword(db, operatorId, password, newPassword, newPasswordConfirm);
     } catch (SQLException ex) {
       throw new SystemException("Wrong authentication", ex);
     } finally {
