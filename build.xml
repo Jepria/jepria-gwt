@@ -21,7 +21,7 @@
   <property file="build.properties"/>
   <property name="MODULE_PACKAGE" value="com/technology/${PROJECT_NAME_IN_PACKAGE}/${MODULE_NAME_IN_PACKAGE}"/>
   <property name="RESOURCE_HOME" value="src/resources/${MODULE_PACKAGE}"/>
-  <property name="JAVA_DOC_DIR" value="../Doc/App/AutoGen"/>
+  <property name="JAVA_DOC_DIR" value="doc"/>
 
   <property name="LOG_LEVEL" value="info"/>
 
@@ -281,7 +281,7 @@
 
   <target name="build" depends="jar, jar-auto, jar-test, jar-resources, jar-dependency"/>
 
-  <target name="doc" depends="java-compile, java-auto-compile">
+  <target name="doc">
     <delete includeemptydirs="true" dir="${JAVA_DOC_DIR}"/>
     <javadoc sourcepath="src/java;auto/java;test/java"
              locale="ru"
@@ -296,13 +296,6 @@
              additionalparam="-notimestamp -Xdoclint:none"
              Windowtitle="${MODULE_NAME} JavaDoc"
              Doctitle="${MODULE_NAME} API Reference">
-      <classpath refid="libs"/>
-      <classpath refid="selenium-libs"/>
-      <classpath refid="powermock-libs"/>
-      <classpath>
-        <pathelement location="${SPRING-MOCK_LIB}"/>
-        <pathelement location="${GWT-TEST-UTILS_LIB}"/>
-      </classpath>
     </javadoc>
   </target>
 
