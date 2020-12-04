@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
 public abstract class MultiInstanceSecurityFilter implements Filter {
 
   public static final String SECURITY_CONSTRAINT = "security-constraint";
+  protected boolean passAllRoles = false;
   protected Set<String> securityRoles;
   protected TreeSet<String> selfFilterMappings;
   protected TreeSet<String> otherFilterMappings = new TreeSet<>();
@@ -64,7 +65,11 @@ public abstract class MultiInstanceSecurityFilter implements Filter {
       String securityRolesString = filterConfig.getInitParameter(SECURITY_CONSTRAINT);
       securityRoles = new HashSet<>();
       if (securityRolesString != null && securityRolesString.length() > 0) {
-        Collections.addAll(securityRoles, securityRolesString.split("\\s+|\\s*,\\s*|\\s*;\\s*"));
+        if (securityRolesString.equals("*")) {
+          passAllRoles = true;
+        } else {
+          Collections.addAll(securityRoles, securityRolesString.split("\\s+|\\s*,\\s*|\\s*;\\s*"));
+        }
       }
       moduleName = filterConfig.getServletContext().getContextPath().replaceFirst("/", "");
     } catch (Throwable th) {

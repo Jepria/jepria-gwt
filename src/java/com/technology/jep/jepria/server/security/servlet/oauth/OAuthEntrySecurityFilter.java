@@ -27,24 +27,24 @@ import static org.jepria.oauth.sdk.OAuthConstants.*;
  * </pre>
  */
 public class OAuthEntrySecurityFilter extends MultiInstanceSecurityFilter {
-
+  
   private static Logger logger = Logger.getLogger(OAuthEntrySecurityFilter.class.getName());
-
+  
   @Override
   public void init(FilterConfig filterConfig) throws ServletException {
     super.init(filterConfig);
   }
-
+  
   @Override
   public void doFilter(final ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
     HttpServletRequest request = (HttpServletRequest) servletRequest;
     HttpServletResponse response = (HttpServletResponse) servletResponse;
-
+    
     if (isSubPath(request.getServletPath())) {
       filterChain.doFilter(servletRequest, servletResponse);
       return;
     }
-
+    
     OAuthRequestWrapper oauthRequest;
     try {
       oauthRequest = request instanceof OAuthRequestWrapper ? (OAuthRequestWrapper) request : new OAuthRequestWrapper(request);
@@ -52,55 +52,8 @@ public class OAuthEntrySecurityFilter extends MultiInstanceSecurityFilter {
       e.printStackTrace();
       throw new ServletException(e);
     }
-
-    /**
-     * Если запрос содержит авторизационный код, то следует запросить по нему токен.
-     */
-    if (oauthRequest.getParameter(CODE) != null && oauthRequest.getParameter(STATE) != null) {
-      String state = getState(request, response);
-      /**
-       * Обязательная проверка CSRF
-       */
-      if (state != null) {
-        try {
-          TokenResponse tokenObject = oauthRequest.getToken(request.getParameter(CODE));
-          if (tokenObject != null) {
-            String token = tokenObject.getAccessToken();
-            Cookie tokenCookie = new Cookie(OAUTH_TOKEN, token);
-            tokenCookie.setSecure(request.isSecure());
-            tokenCookie.setPath("/");
-            tokenCookie.setHttpOnly(true);
-            response.addCookie(tokenCookie);
-            response.sendRedirect(state);
-            return;
-          } else {
-            logger.error("Token request failed");
-            throw new ServletException("Token request failed");
-          }
-        } catch (Throwable th) {
-          th.printStackTrace();
-          throw new RuntimeException(th);
-        }
-      } else {
-        logger.error("State param is not valid");
-        oauthRequest.buildAuthorizationRequest(response);
-        return;
-      }
-    } else if (oauthRequest.getParameterMap().size() == 1 && oauthRequest.getParameter(STATE) != null) {
-      /**
-       * Вход после logout;
-       */
-      String state = getState(request, response);
-      /**
-       * Обязательная проверка CSRF
-       */
-      if (state != null) {
-        response.sendRedirect(state);
-        return;
-      }
-    }
-  
-    if (securityRoles.size() == 0) {
+    
+    if (securityRoles.size() == 0 && !passAllRoles) {
       /**
        * For public resource: authorize request, if it has token. (for cases where JepMainServiceServlet is public)
        */
@@ -110,18 +63,67 @@ public class OAuthEntrySecurityFilter extends MultiInstanceSecurityFilter {
       }
       filterChain.doFilter(oauthRequest, servletResponse);
       return;
-    } else if (oauthRequest.authenticate(response)) {
-      if (securityRoles.stream().anyMatch(oauthRequest::isUserInRole)) {
-        filterChain.doFilter(oauthRequest, servletResponse);
-      } else {
-        response.sendError(SC_FORBIDDEN, "Access denied");
-      }
     } else {
-      oauthRequest.buildAuthorizationRequest(response);
-      return;
+      /**
+       * Если запрос содержит авторизационный код, то следует запросить по нему токен.
+       */
+      if (oauthRequest.getParameter(CODE) != null && oauthRequest.getParameter(STATE) != null) {
+        String state = getState(request, response);
+        /**
+         * Обязательная проверка CSRF
+         */
+        if (state != null) {
+          try {
+            TokenResponse tokenObject = oauthRequest.getToken(request.getParameter(CODE));
+            if (tokenObject != null) {
+              String token = tokenObject.getAccessToken();
+              Cookie tokenCookie = new Cookie(OAUTH_TOKEN, token);
+              tokenCookie.setSecure(request.isSecure());
+              tokenCookie.setPath("/");
+              tokenCookie.setHttpOnly(true);
+              response.addCookie(tokenCookie);
+              response.sendRedirect(state);
+              return;
+            } else {
+              logger.error("Token request failed");
+              throw new ServletException("Token request failed");
+            }
+          } catch (Throwable th) {
+            th.printStackTrace();
+            throw new RuntimeException(th);
+          }
+        } else {
+          logger.error("State param is not valid");
+          oauthRequest.buildAuthorizationRequest(response);
+          return;
+        }
+      } else if (oauthRequest.getParameterMap().size() == 1 && oauthRequest.getParameter(STATE) != null) {
+        /**
+         * Вход после logout;
+         */
+        String state = getState(request, response);
+        /**
+         * Обязательная проверка CSRF
+         */
+        if (state != null) {
+          response.sendRedirect(state);
+          return;
+        }
+      }
+      
+      if (oauthRequest.authenticate(response)) {
+        if (securityRoles.stream().anyMatch(oauthRequest::isUserInRole) || passAllRoles) {
+          filterChain.doFilter(oauthRequest, servletResponse);
+        } else {
+          response.sendError(SC_FORBIDDEN, "Access denied");
+        }
+      } else {
+        oauthRequest.buildAuthorizationRequest(response);
+        return;
+      }
     }
   }
-
+  
   private String getState(HttpServletRequest request, HttpServletResponse response) {
     String state = request.getParameter(STATE);
     Cookie[] cookies = request.getCookies();
@@ -136,7 +138,7 @@ public class OAuthEntrySecurityFilter extends MultiInstanceSecurityFilter {
     }
     return null;
   }
-
+  
   @Override
   public void destroy() {
     securityRoles = null;

@@ -27,6 +27,10 @@ public class OAuthServletSecurityFilter extends MultiInstanceSecurityFilter {
   public void init(FilterConfig filterConfig) throws ServletException {
     super.init(filterConfig);
   }
+  
+  protected void prepareAccessDeniedResponse(HttpServletResponse response) {}
+  
+  protected void prepareUnauthorizedResponse(HttpServletResponse response) {}
 
   @Override
   public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
@@ -46,7 +50,7 @@ public class OAuthServletSecurityFilter extends MultiInstanceSecurityFilter {
       throw new ServletException(e);
     }
   
-    if (securityRoles.size() == 0) {
+    if (securityRoles.size() == 0 && !passAllRoles) {
       /**
        * For public resource: authorize request, if it has token. (for cases where JepMainServiceServlet is public)
        */
@@ -59,14 +63,15 @@ public class OAuthServletSecurityFilter extends MultiInstanceSecurityFilter {
     }
 
     if (oauthRequest.authenticate(response)) {
-      if (securityRoles.stream().anyMatch(oauthRequest::isUserInRole)) {
+      if (securityRoles.stream().anyMatch(oauthRequest::isUserInRole) || passAllRoles) {
         filterChain.doFilter(oauthRequest, servletResponse);
       } else {
-        response.sendError(SC_FORBIDDEN, "Access denied");
+        response.sendError(SC_FORBIDDEN);
+        prepareAccessDeniedResponse(response);
       }
     } else {
-      response.sendError(SC_UNAUTHORIZED, "access token is invalid or has expired");
-      return;
+      response.sendError(SC_UNAUTHORIZED);
+      prepareUnauthorizedResponse(response);
     }
   }
 

@@ -18,7 +18,7 @@
     catch(err) {
     }
 //-->
-var methods = {"i0":10,"i1":10,"i2":10};
+var methods = {"i0":10,"i1":10,"i2":10,"i3":10,"i4":10};
 var tabs = {65535:["t0","All Methods"],2:["t2","Instance Methods"],8:["t4","Concrete Methods"]};
 var altColor = "altColor";
 var rowColor = "rowColor";
@@ -150,7 +150,7 @@ extends <a href="../../../../../../../../com/technology/jep/jepria/server/securi
 <!--   -->
 </a>
 <h3>Fields inherited from class&nbsp;com.technology.jep.jepria.server.security.servlet.<a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/MultiInstanceSecurityFilter.html" title="class in com.technology.jep.jepria.server.security.servlet">MultiInstanceSecurityFilter</a></h3>
-<code><a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/MultiInstanceSecurityFilter.html#moduleName">moduleName</a>, <a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/MultiInstanceSecurityFilter.html#otherFilterMappings">otherFilterMappings</a>, <a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/MultiInstanceSecurityFilter.html#SECURITY_CONSTRAINT">SECURITY_CONSTRAINT</a>, <a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/MultiInstanceSecurityFilter.html#securityRoles">securityRoles</a>, <a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/MultiInstanceSecurityFilter.html#selfFilterMappings">selfFilterMappings</a></code></li>
+<code><a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/MultiInstanceSecurityFilter.html#moduleName">moduleName</a>, <a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/MultiInstanceSecurityFilter.html#otherFilterMappings">otherFilterMappings</a>, <a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/MultiInstanceSecurityFilter.html#passAllRoles">passAllRoles</a>, <a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/MultiInstanceSecurityFilter.html#SECURITY_CONSTRAINT">SECURITY_CONSTRAINT</a>, <a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/MultiInstanceSecurityFilter.html#securityRoles">securityRoles</a>, <a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/MultiInstanceSecurityFilter.html#selfFilterMappings">selfFilterMappings</a></code></li>
 </ul>
 </li>
 </ul>
@@ -196,6 +196,14 @@ extends <a href="../../../../../../../../com/technology/jep/jepria/server/securi
 <tr id="i2" class="altColor">
 <td class="colFirst"><code>void</code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/oauth/OAuthServletSecurityFilter.html#init-FilterConfig-">init</a></span>(FilterConfig&nbsp;filterConfig)</code>&nbsp;</td>
+</tr>
+<tr id="i3" class="rowColor">
+<td class="colFirst"><code>protected void</code></td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/oauth/OAuthServletSecurityFilter.html#prepareAccessDeniedResponse-HttpServletResponse-">prepareAccessDeniedResponse</a></span>(HttpServletResponse&nbsp;response)</code>&nbsp;</td>
+</tr>
+<tr id="i4" class="altColor">
+<td class="colFirst"><code>protected void</code></td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../../../../../../com/technology/jep/jepria/server/security/servlet/oauth/OAuthServletSecurityFilter.html#prepareUnauthorizedResponse-HttpServletResponse-">prepareUnauthorizedResponse</a></span>(HttpServletResponse&nbsp;response)</code>&nbsp;</td>
 </tr>
 </table>
 <ul class="blockList">
@@ -274,6 +282,24 @@ extends <a href="../../../../../../../../com/technology/jep/jepria/server/securi
 <dt><span class="throwsLabel">Throws:</span></dt>
 <dd><code>ServletException</code></dd>
 </dl>
+</li>
+</ul>
+<a name="prepareAccessDeniedResponse-HttpServletResponse-">
+<!--   -->
+</a>
+<ul class="blockList">
+<li class="blockList">
+<h4>prepareAccessDeniedResponse</h4>
+<pre>protected&nbsp;void&nbsp;prepareAccessDeniedResponse(HttpServletResponse&nbsp;response)</pre>
+</li>
+</ul>
+<a name="prepareUnauthorizedResponse-HttpServletResponse-">
+<!--   -->
+</a>
+<ul class="blockList">
+<li class="blockList">
+<h4>prepareUnauthorizedResponse</h4>
+<pre>protected&nbsp;void&nbsp;prepareUnauthorizedResponse(HttpServletResponse&nbsp;response)</pre>
 </li>
 </ul>
 <a name="doFilter-ServletRequest-ServletResponse-FilterChain-">
