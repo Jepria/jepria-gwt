@@ -164,7 +164,7 @@ public class TreeField<V extends JepOption> extends Composite implements HasChec
   /**
    * Карта соответствия узла дерева с его логическим представлением.
    */
-  private Map<Object, TreeNodeInfo<V>> nodeMapOfDisplay = new HashMap<Object, TreeNodeInfo<V>>();
+  private Map<Object, TreeNodeInfo<V>> nodeMapOfDisplay = new HashMap<>();
   
   /**
    * Список доступных для выбора узлов, учитывающий возможность установки значения в модель выбора
@@ -460,7 +460,7 @@ public class TreeField<V extends JepOption> extends Composite implements HasChec
   public boolean isNodeOpened(TreeNode node, V value){
     for(int i = 0; i < node.getChildCount(); i++){
       V entityChild = (V) node.getChildValue(i);
-      if(value.equals(entityChild)){
+      if(value.getValue().equals(entityChild.getValue())){
         return node.isChildOpen(i);
       } else if(node.isChildOpen(i)){
         TreeNode currentNode = node.setChildOpen(i, true, false);
@@ -537,8 +537,15 @@ public class TreeField<V extends JepOption> extends Composite implements HasChec
    * @param value      узел дерева  
    * @param checked    признак выбора
    */
-  public void setChecked(V value, boolean checked){
-    selectionModel.setSelected(value, checked);
+  public boolean setChecked(V value, boolean checked){
+    if (value != null) {
+      TreeNodeInfo<V> nodeInfo = nodeMapOfDisplay.get(value.getValue());
+      if (nodeInfo != null) {
+        selectionModel.setSelected(nodeInfo.getValue(), checked);
+        return true;
+      }
+    }
+    return false;
   }
 
   
@@ -563,7 +570,7 @@ public class TreeField<V extends JepOption> extends Composite implements HasChec
   public TreeNode setExpanded(TreeNode node, V value, boolean expand){
     for(int i = 0; i < node.getChildCount(); i++){
       V entityChild = (V) node.getChildValue(i);
-      if(value.equals(entityChild)){
+      if(value.getValue().equals(entityChild.getValue())){
         return node.setChildOpen(i, expand);
       } else if(node.isChildOpen(i)){
         TreeNode currentNode = node.setChildOpen(i, true);
@@ -610,7 +617,7 @@ public class TreeField<V extends JepOption> extends Composite implements HasChec
    */
   public void refreshNode(V node){
     TreeNodeInfo<V> nodeInfo = getNodeInfoByValue(node);
-    if (!(nodeInfo == null || nodeInfo.isDestroyed())) {
+    if (!(nodeInfo == null || getTreeNode(node) == null || nodeInfo.isDestroyed())) {
       ((TreeModel) tree.getTreeViewModel()).refreshNode(node);
     }
   }
@@ -821,6 +828,7 @@ public class TreeField<V extends JepOption> extends Composite implements HasChec
     NativeEvent nativeEvent = event.getNativeEvent();
     if (CLICK.equals(nativeEvent.getType())) {
       V currentNode = event.getValue();
+      if (!availableSelectedNodes.contains(currentNode)) return SelectAction.IGNORE;
       if ((checkNodes.equals(CheckNodes.LEAF) && !isLeaf(currentNode)) || 
           (checkNodes.equals(CheckNodes.PARENT) && isLeaf(currentNode)) || !checkable) return SelectAction.IGNORE;
       CheckChangeEvent<?> checkChangeEvent = new CheckChangeEvent<V>(currentNode, !isSelected(currentNode));
@@ -992,7 +1000,7 @@ public class TreeField<V extends JepOption> extends Composite implements HasChec
               if (nodeMapOfDisplay.containsKey(value != null ? value.getValue() : null)) {
                 nodeMapOfDisplay.get(value != null ? value.getValue() : null).setDisplay(display);
               } else {
-                nodeMapOfDisplay.put(value.getValue(), new TreeNodeInfo<V>(display, result, null, expandNode));
+                nodeMapOfDisplay.put(value.getValue(), new TreeNodeInfo<V>(display, result, null, expandNode, value));
               }
               markNodeAsSelectedIfAvailable(value);
             }
@@ -1230,25 +1238,21 @@ public class TreeField<V extends JepOption> extends Composite implements HasChec
     
     public TreeFieldSelectionModel() {
       super();
-      super.addSelectionChangeHandler(new SelectionChangeEvent.Handler() {
-        @Override
-        public void onSelectionChange(SelectionChangeEvent event) {
-          if (isSelectAllRefreshSсheduled || isRefreshInProgress) return; // Оптимизация, нет смысла выполнять вычисления на каждом select при массовом выделении.
-          isSelectAllRefreshSсheduled = true;
-          Scheduler.get().scheduleFinally(new ScheduledCommand(){// Вынос вычислений в EventLoop, чтобы не тормозить рендер страницы
-            @Override 
-            public void execute() {
-              List<V> selectedItems = getCheckedSelection();
-              if (availableSelectedNodes.size() == selectedItems.size()) {
-                selectAllCheckBox.setValue(availableSelectedNodes.containsAll(selectedItems));
-              } else  if (selectedItems.size() >= availableSelectedNodes.size()) {
-                selectAllCheckBox.setValue(selectedItems.containsAll(availableSelectedNodes));
-              } else {
-                selectAllCheckBox.setValue(false);
-              }
-              isSelectAllRefreshSсheduled = false;
-            }});
-        }
+      super.addSelectionChangeHandler(event -> {
+        if (isSelectAllRefreshSсheduled || isRefreshInProgress) return; // Оптимизация, нет смысла выполнять вычисления на каждом select при массовом выделении.
+        isSelectAllRefreshSсheduled = true;
+        // Вынос вычислений в EventLoop, чтобы не тормозить рендер страницы
+        Scheduler.get().scheduleFinally(() -> {
+          List<V> selectedItems = getCheckedSelection();
+          if (availableSelectedNodes.size() == selectedItems.size()) {
+            selectAllCheckBox.setValue(availableSelectedNodes.containsAll(selectedItems));
+          } else  if (selectedItems.size() >= availableSelectedNodes.size()) {
+            selectAllCheckBox.setValue(selectedItems.containsAll(availableSelectedNodes));
+          } else {
+            selectAllCheckBox.setValue(false);
+          }
+          isSelectAllRefreshSсheduled = false;
+        });
       });
     }
     

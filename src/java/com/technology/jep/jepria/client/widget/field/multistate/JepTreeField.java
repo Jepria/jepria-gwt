@@ -119,7 +119,14 @@ public class JepTreeField extends JepMultiStateField<TreeField<JepOption>, HTML>
   @Override
   @SuppressWarnings("unchecked")
   public List<JepOption> getValue() {
-    return editableCard.getCheckedSelection();
+    if (checkedValues != null && checkedValues.size() > 0) {
+      Set<JepOption> values = new HashSet<>();
+      values.addAll(checkedValues);
+      values.addAll(editableCard.getCheckedSelection());
+      return new ArrayList<>(values);
+    } else {
+      return editableCard.getCheckedSelection();
+    }
   }
   
   /**
@@ -220,7 +227,20 @@ public class JepTreeField extends JepMultiStateField<TreeField<JepOption>, HTML>
     // Создание копии списка элементов важно, поскольку в методе processExpanding
     // происходит удаление элементов списка, что может привести к потенциальным ошибкам 
     // в клиентских модулях
-    this.expandedValues = new ArrayList<JepOption>(expandedValues);
+    this.expandedValues = new ArrayList<>(expandedValues);
+    editableCard.setCheckable(false);
+    processExpanding();
+  }
+  
+  /**
+   * Указывает, какие узлы необходимо раскрыть.
+   */
+  public void setExpanded(List<JepOption> expandedValues, List<JepOption> checkedValues) {
+    // Создание копии списка элементов важно, поскольку в методе processExpanding
+    // происходит удаление элементов списка, что может привести к потенциальным ошибкам
+    // в клиентских модулях
+    this.expandedValues = new ArrayList<>(expandedValues);
+    this.checkedValues = new ArrayList<>(checkedValues);
     editableCard.setCheckable(false);
     processExpanding();
   }
@@ -238,14 +258,10 @@ public class JepTreeField extends JepMultiStateField<TreeField<JepOption>, HTML>
         expandedValues.remove(0);
         processExpanding();
       } else {
-        Scheduler.get().scheduleDeferred(new ScheduledCommand() {
-          @Override
-          public void execute() {
-            processExpanding();
-          }
-        });
+        Scheduler.get().scheduleDeferred(() -> processExpanding());
       }
     } else {
+      processChecking();
       setLoadingImage(false);
       editableCard.setCheckable(checkable);
     }
@@ -262,8 +278,9 @@ public class JepTreeField extends JepMultiStateField<TreeField<JepOption>, HTML>
         JepOption option = iterator.next();
         // Удаляем значение, т.к. открытие узлов - это разовая (в данном случае) операция
         // и НЕ нужно повторно открывать указанные узлы (которые пользователь, возможно, уже закрыл).
-        editableCard.setChecked(option, true);
-        iterator.remove();
+        if (editableCard.setChecked(option, true)) {
+          iterator.remove();
+        }
       }
     }
   }

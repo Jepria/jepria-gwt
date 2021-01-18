@@ -10,6 +10,7 @@ import com.google.gwt.view.client.HasData;
 public class TreeNodeInfo<V> {
   
   private V parent;
+  private V value;
   private HasData<V> display;
   private List<V> data;
   private List<V> children;
@@ -18,12 +19,20 @@ public class TreeNodeInfo<V> {
   private boolean isFromCache;
   private boolean isDestroyed = false;
   
-  public TreeNodeInfo(HasData<V> display, List<V> data, List<V> children, V parent) {
+  public TreeNodeInfo(HasData<V> display, List<V> data, List<V> children, V parent, V value) {
     this.display = display;
     this.data = data;
     this.children = children;
     this.parent = parent;
     this.isFromCache = false;
+    this.value = value;
+  }
+  
+  public V getValue() {
+    return value;
+  }
+  public void setValue(V value) {
+    this.value = value;
   }
   public HasData<V> getDisplay() {
     return display;
